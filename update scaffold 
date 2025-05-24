@@ -1,0 +1,81 @@
+## Intelligent Record Clearing System - Hybrid Rust + Python Scaffold
+
+# Root Directory Structure:
+# clear_my_record_backend/
+# ├── rust_backend/           --> Actix-web secure backend (Rust)
+# ├── python_ml_engine/      --> FastAPI ML/NLP intelligence engine (Python)
+# ├── shared_proto/          --> Protocol definitions for communication
+# ├── database/              --> PostgreSQL schemas + migrations
+# ├── scripts/               --> CLI tools and data scripts
+# ├── docker/                --> Deployment config (Docker, Docker Compose)
+# └── README.md
+
+
+# ---------------------- rust_backend/ ----------------------
+// rust_backend/src/main.rs
+use actix_web::{web, App, HttpServer};
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .route("/upload_record", web::post().to(handlers::upload_record))
+            .route("/check_status/{id}", web::get().to(handlers::check_status))
+    })
+    .bind("0.0.0.0:8080")?
+    .run()
+    .await
+}
+
+mod handlers;
+mod storage;
+mod auth;
+
+
+# ---------------------- python_ml_engine/ ----------------------
+# python_ml_engine/main.py
+from fastapi import FastAPI, UploadFile, File
+from nlp_parser import parse_record
+from eligibility import evaluate_eligibility
+from doc_generator import generate_document
+
+app = FastAPI()
+
+@app.post("/analyze_record/")
+async def analyze_record(file: UploadFile = File(...)):
+    content = await file.read()
+    structured_data = parse_record(content)
+    eligibility_result = evaluate_eligibility(structured_data)
+    document_path = generate_document(structured_data)
+    return {"eligibility": eligibility_result, "document": document_path}
+
+
+# ---------------------- python_ml_engine/nlp_parser.py ----------------------
+import spacy
+
+nlp = spacy.load("en_core_web_trf")
+
+def parse_record(raw_text):
+    doc = nlp(raw_text.decode("utf-8"))
+    extracted = {}
+    # Extract common legal entities
+    for ent in doc.ents:
+        if ent.label_ in ["DATE", "LAW", "PERSON", "GPE"]:
+            extracted[ent.label_] = ent.text
+    return extracted
+
+
+# ---------------------- python_ml_engine/eligibility.py ----------------------
+def evaluate_eligibility(data):
+    # Placeholder logic
+    if "FELONY" in data.get("LAW", "").upper():
+        return "Ineligible"
+    else:
+        return "Likely Eligible"
+
+
+# ---------------------- python_ml_engine/doc_generator.py ----------------------
+from jinja2 import Template
+
+def generate_document(data):
+    template = Template(open
